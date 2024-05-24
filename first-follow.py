@@ -1,35 +1,122 @@
-class First_Follow():
-    def __init__(self, grammar):
-        self.grammar = grammar
-        self.non_terminals = grammar.keys()
-        self.rules = [(head, body) for head, bodies in grammar.items() for body in bodies]
+import sys
+sys.setrecursionlimit(60)
 
-    def compute_first(self, variable):
-        first = set()
-        productions = [rule[1] for rule in self.rules if rule[0] == variable]
-        for production in productions:
-            if not production[0].isupper():
-                first.add(production[0])
-            else:
-                for x in production:
-                    first |= self.compute_first(x)
-                    if '@' not in first:
-                        break
-                else:
-                    first.remove('@')
-        return first
-    def print_sets(self):
-        print("First Sets:")
-        for non_terminal in self.non_terminals:
-            print(f"{non_terminal}: {self.compute_first(non_terminal)}")
+def first(string):
+    first_ = set()
+    if string in non_terminals:
+        alternatives = productions_dict[string]
 
-example_grammar = {
-    'E': ['TZ'],
-    'Z': ['+TZ', '@'],
-    'T': ['FY'],
-    'Y': ['*FY', '@'],
-    'F': ['(E)', 'i'],
-}
-ff = First_Follow(example_grammar)
-print("epsilon is printed as @")
-ff.print_sets()
+        for alternative in alternatives:
+            first_2 = first(alternative)
+            first_ = first_ |first_2
+
+    elif string in terminals:
+        first_ = {string}
+
+    elif string=='' or string=='@':
+        first_ = {'@'}
+
+    else:
+        first_2 = first(string[0])
+        # if '@' in first_2:
+        #     i = 1
+        #     while '@' in first_2:
+        #         #print("inside while")
+
+        #         first_ = first_ | (first_2 - {'@'})
+        #         #print('string[i:]=', string[i:])
+        #         if string[i:] in terminals:
+        #             first_ = first_ | {string[i:]}
+        #             break
+        #         elif string[i:] == '':
+        #             first_ = first_ | {'@'}
+        #             break
+        #         first_2 = first(string[i:])
+        #         first_ = first_ | first_2 - {'@'}
+        #         i += 1
+        # else:
+        first_ = first_ | first_2
+
+    return  first_
+
+
+def follow(nT):
+    follow_ = set()
+    prods = productions_dict.items()
+    if nT==starting_symbol:
+        follow_ = follow_ | {'$'}
+    for nt,rhs in prods:
+        for alt in rhs:
+            for char in alt:
+                if char==nT:
+                    following_str = alt[alt.index(char) + 1:]
+                    if following_str=='':
+                        if nt==nT:
+                            continue
+                        else:
+                            follow_ = follow_ | follow(nt)
+                    else:
+                        follow_2 = first(following_str)
+                        if '@' in follow_2:
+                            follow_ = follow_ | follow_2-{'@'}
+                            follow_ = follow_ | follow(nt)
+                        else:
+                            follow_ = follow_ | follow_2
+    return follow_
+
+no_of_terminals=5
+
+terminals = ['(',')','+','*','a']
+no_of_non_terminals=5
+
+non_terminals = ['E','A','T','B','F']
+
+starting_symbol = 'E'
+
+no_of_productions = 5
+
+productions = []
+
+print("Enter the productions:")
+for _ in range(no_of_productions):
+    productions.append(input())
+productions_dict = {}
+
+for nT in non_terminals:
+    productions_dict[nT] = []
+
+
+for production in productions:
+    nonterm_to_prod = production.split("->")
+    alternatives = nonterm_to_prod[1].split("/")
+    for alternative in alternatives:
+        productions_dict[nonterm_to_prod[0]].append(alternative)
+
+FIRST = {}
+FOLLOW = {}
+
+for non_terminal in non_terminals:
+    FIRST[non_terminal] = set()
+
+for non_terminal in non_terminals:
+    FOLLOW[non_terminal] = set()
+
+for non_terminal in non_terminals:
+    FIRST[non_terminal] = FIRST[non_terminal] | first(non_terminal)
+
+
+FOLLOW[starting_symbol] = FOLLOW[starting_symbol] | {'$'}
+for non_terminal in non_terminals:
+    FOLLOW[non_terminal] = FOLLOW[non_terminal] | follow(non_terminal)
+
+print("{: ^20}{: ^20}{: ^20}".format('Non Terminals','First','Follow'))
+for non_terminal in non_terminals:
+    print("{: ^20}{: ^20}{: ^20}".format(non_terminal,str(FIRST[non_terminal]),str(FOLLOW[non_terminal])))
+
+
+######################input##############
+# E->TA
+# A->+TA/@
+# T->FB
+# B->*FB/@
+# F->(E)/a
